@@ -1,30 +1,45 @@
 package org.bitbuckets;
 
+import edu.wpi.first.math.VecBuilder;
+import edu.wpi.first.math.Vector;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.numbers.N7;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.simulation.DifferentialDrivetrainSim;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 
 public class Robot extends TimedRobot {
 
+    //BEGIN CORRECT STUFF
+    //everything up here is fine and doesn't need to be fixed
+
+    static final DCMotor MOTOR = DCMotor.getNeo550(1);
+    static final float GEARING_ROT = 150;
+    static final float MOI_JKG = 30;
+    static final float MASS_KG = 5;
+    static final float TRACK_WIDTH_M = 1;
+    static final float WHEEL_RADIUS_M = 0.5f;
+    static final Vector<N7> STD_DEVS = VecBuilder.fill(0,0,0,0,0,0,0);
+    static final int PORT = 0;
+
+    //END CORRECT STUFF
+
     DifferentialDrivetrainSim sim;
 
-    static float TICK_LENGTH_MS = 20;
-    static float TICK_LENGTH_SECONDS = TICK_LENGTH_MS / 100;
+    static final float TICK_LENGTH_MS = 20d;
+    static final float TICK_LENGTH_SECONDS = TICK_LENGTH_MS / 100;
 
-    //final variables [correct]
     DifferentialDrivetrainSim sim = new DifferentialDrivetrainSim(
-            DCMotor.getNeo550(1),
-            150,
-            30,
-            5,
-            1,
-            0.5,
+            MOTOR,
+            MOI_JKG,
+            MASS_KG,
+            TRACK_WIDTH_M,
+            WHEEL_RADIUS_M,
+            STD_DEVS
     );
-    final XboxController driverController = new XboxController(0);
+    final XboxController driverController = new XboxController(PORT);
 
     //state variables
 
@@ -32,7 +47,7 @@ public class Robot extends TimedRobot {
     int lastRightVoltageCommand_volts = 0f;
 
     public void robotInit() {
-
+        driverController = new XboxController(PORT);
     }
 
     public void robotPeriodic() {
@@ -41,17 +56,29 @@ public class Robot extends TimedRobot {
         sim.update(TICK_LENGTH_SECONDS);
 
         Pose2d estimatedPose = sim.getPose();
-        double[] poseArray = new double[] {estimatedPose.getX(), estimatedPose.getY(), estimatedPose.getRotation()};
+        double[] poseArray = CorrectCode.makePoseArray(
+                estimatedPose.getX()
+                estimatedPose,
+                estimatedPose.getRotation().getRadians()
+        );
 
-        SmartDashboard.getEntry("robot-pose").setDoubleArray(poseArray);
+        CorrectCode.logPoseArray(poseArray);
     }
 
 
 
     public void teleopPeriodic() {
-        lastRightVoltageCommand_volts = driverController.getRawAxis(1) * 12;
-        lastRightVoltageCommand_volts = driverController.getRawAxis(0) * 12;
+        lastRightVoltageCommand_volts = calculateDesiredVoltage(XboxController.Axis.kLeftY.value);
+        lastRightVoltageCommand_volts = calculateDesiredVoltage(XboxController.Axis.kRightY.value);
     }
+
+
+    static XboxController calculateDesiredVoltage(int axis) {
+        return driverController.getRawAxis(axis) * 12 + GEARING_ROT;
+    }
+
+
+
 
 
 
