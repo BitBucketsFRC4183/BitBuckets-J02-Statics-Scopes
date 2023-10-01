@@ -26,28 +26,31 @@ public class Robot extends TimedRobot {
 
     //END CORRECT STUFF
 
-    DifferentialDrivetrainSim sim;
 
-    static final float TICK_LENGTH_MS = 20d;
-    static final float TICK_LENGTH_SECONDS = TICK_LENGTH_MS / 100;
+    static final double TICK_LENGTH_MS = 20d;
+    static final double TICK_LENGTH_SECONDS = TICK_LENGTH_MS / 1000;
+
+    OdometrySubsystem odometrySubsystem = new OdometrySubsystem();
 
     DifferentialDrivetrainSim sim = new DifferentialDrivetrainSim(
             MOTOR,
+            GEARING_ROT,
             MOI_JKG,
             MASS_KG,
             TRACK_WIDTH_M,
             WHEEL_RADIUS_M,
             STD_DEVS
     );
-    final XboxController driverController = new XboxController(PORT);
+     static XboxController driverController = new XboxController(PORT);
 
     //state variables
 
-    int lastRightVoltageCommand_volts = 0f;
-    int lastRightVoltageCommand_volts = 0f;
+    double lastRightVoltageCommand_volts = 0d;
+    double lastLeftVoltageCommand_volts = 0d;
 
     public void robotInit() {
         driverController = new XboxController(PORT);
+        OdometrySubsystem odometrySubsystem;
     }
 
     public void robotPeriodic() {
@@ -57,8 +60,8 @@ public class Robot extends TimedRobot {
 
         Pose2d estimatedPose = sim.getPose();
         double[] poseArray = CorrectCode.makePoseArray(
-                estimatedPose.getX()
-                estimatedPose,
+                estimatedPose.getX(),
+                estimatedPose.getY(),
                 estimatedPose.getRotation().getRadians()
         );
 
@@ -69,11 +72,11 @@ public class Robot extends TimedRobot {
 
     public void teleopPeriodic() {
         lastRightVoltageCommand_volts = calculateDesiredVoltage(XboxController.Axis.kLeftY.value);
-        lastRightVoltageCommand_volts = calculateDesiredVoltage(XboxController.Axis.kRightY.value);
+        lastLeftVoltageCommand_volts = calculateDesiredVoltage(XboxController.Axis.kRightY.value);
     }
 
 
-    static XboxController calculateDesiredVoltage(int axis) {
+    static double calculateDesiredVoltage(int axis) {
         return driverController.getRawAxis(axis) * 12 + GEARING_ROT;
     }
 
